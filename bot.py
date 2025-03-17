@@ -1,26 +1,30 @@
 import os
 import re
 import asyncio
-from fastapi import FastAPI, Request
+from aiohttp import web
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import ChatPermissions
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
-# 🔹 Получаем токен из переменных окружения
+# 🔹 Получаем токен и вебхук URL из переменных окружения
 TOKEN = os.getenv("TOKEN")
 WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Укажи этот URL в Render
 
-if not TOKEN:
-    raise ValueError("🚨 Ошибка! TOKEN не найден. Проверь переменные окружения в Render!")
+if not TOKEN or not WEBHOOK_URL:
+    raise ValueError("🚨 Ошибка! TOKEN или WEBHOOK_URL не найдены. Проверь переменные окружения в Render!")
 
 # 🔹 Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# 🔹 Настройка FastAPI
-app = FastAPI()
+# 🔹 Создаем Aiohttp-приложение
+app = web.Application()
+
+# 🔹 Регистрируем вебхук в aiogram
+SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/")
+setup_application(app, dp, bot=bot)
 
 # 🔹 Храним количество сообщений пользователей
 user_messages = {}
@@ -66,23 +70,19 @@ async def check_message(message: types.Message):
             await message.answer(f"🚫 Пользователь @{message.from_user.username} забанен за спам эмодзи.")
             return
 
-@app.post("/")
-async def process_webhook(request: Request):
-    """ Обрабатывает входящие запросы от Telegram """
-    data = await request.json()
-    update = types.Update(**data)
-    await dp.feed_update(bot, update)
-
-async def main():
-    """ Запуск Webhook """
+async def set_webhook():
+    """ Устанавливает вебхук """
     webhook_info = await bot.get_webhook_info()
     
     if webhook_info.url != WEBHOOK_URL:
         await bot.set_webhook(WEBHOOK_URL)
         print(f"✅ Webhook установлен на {WEBHOOK_URL}")
 
-    SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/")
-    setup_application(app, dp, bot=bot)
+async def on_startup(app):
+    """ Выполняется при старте приложения """
+    await set_webhook()
+
+app.on_startup.append(on_startup)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    web.run_app(app, port=8080)  # Запуск веб-приложения
