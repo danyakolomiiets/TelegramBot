@@ -1,11 +1,4 @@
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN")
-
-if not TOKEN:
-    raise ValueError("🚨 Ошибка! BOT_TOKEN не найден. Проверь .env или переменные окружения!")
 import re
 import asyncio
 from aiogram import Bot, Dispatcher, types
@@ -14,10 +7,12 @@ from aiogram.types import ChatPermissions
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 
-
-# Загружаем токен из .env
+# Загружаем токен
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
+
+if not TOKEN:
+    raise ValueError("🚨 Ошибка! BOT_TOKEN не найден. Проверь .env или переменные окружения!")
 
 # Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
@@ -41,8 +36,7 @@ async def get_user_messages_count(chat_id: int, user_id: int):
         if member.user.id == user_id:
             return MESSAGE_LIMIT + 1  # Делаем вид, что он отправил больше 5 сообщений
 
-    count = user_messages.get((chat_id, user_id), 0)
-    return count
+    return user_messages.get((chat_id, user_id), 0)
 
 # Обработчик новых сообщений
 @dp.message()
