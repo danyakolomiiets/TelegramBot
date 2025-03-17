@@ -12,10 +12,10 @@ from aiogram.fsm.storage.memory import MemoryStorage
 logging.basicConfig(level=logging.INFO)
 
 # 🔥 Настройки
-TOKEN = os.getenv("TOKEN", "7888371111:AAEdOKdeLH1fmZygscWXttr4vwwQGwrJNTk")  # ЗАМЕНИ НА СВОЙ ТОКЕН
+TOKEN = os.getenv("TOKEN")  # ЗАМЕНИ НА СВОЙ ТОКЕН
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://telegrambot-tnm7.onrender.com/")  # Твой Render URL
 
-if not TOKEN or "7888371111:AAEdOKdeLH1fmZygscWXttr4vwwQGwrJNTk" in TOKEN:
+if not TOKEN in TOKEN:
     raise ValueError("🚨 Ошибка! Укажи правильный TOKEN в переменных окружения!")
 
 # 🔥 Создаём бота и диспетчер
