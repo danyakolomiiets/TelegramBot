@@ -1,54 +1,69 @@
 import os
 import re
+import asyncio
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import ChatMemberUpdated
+from aiogram.filters import Command
+from aiogram.types import ChatPermissions
+from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
 
 # Загружаем токен из .env
 load_dotenv()
-TOKEN = os.getenv("TOKEN")
+TOKEN = os.getenv("BOT_TOKEN")
 
-if not TOKEN:
-    raise ValueError("❌ Токен не найден! Проверь .env файл.")
-
+# Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
-from aiogram import Bot, Dispatcher
+dp = Dispatcher(storage=MemoryStorage())
 
-bot = Bot(token=TOKEN)
-dp = Dispatcher()
+# Стоп-слова и лимит эмодзи
+STOP_WORDS = {"заработок", "работа", "команда"}
+EMOJI_PATTERN = re.compile(r'[\U0001F300-\U0001F6FF]', re.UNICODE)  # Поиск эмодзи
+MESSAGE_LIMIT = 5  # Лимит сообщений
 
-# Запрещённые слова
-BANNED_WORDS = ["заработок", "работа", "команда"]
+# Храним количество сообщений пользователей
+user_messages = {}
 
-# Функция для подсчёта эмоджи в сообщении
-def count_emojis(text):
-    emoji_pattern = re.compile(r'[\U0001F300-\U0001F6FF\U0001F900-\U0001F9FF\U0001F680-\U0001F6C0\U0001F1E0-\U0001F1FF]+', flags=re.UNICODE)
-    return len(emoji_pattern.findall(text))
+# Функция для проверки количества сообщений
+async def get_user_messages_count(chat_id: int, user_id: int):
+    chat = await bot.get_chat(chat_id)
+    members = await bot.get_chat_administrators(chat_id)
 
-@dp.message_handler()
-async def check_messages(message: types.Message):
-    """ Проверяет количество сообщений пользователя в чате """
+    # Проверяем, есть ли пользователь в админах (не баним админов)
+    for member in members:
+        if member.user.id == user_id:
+            return MESSAGE_LIMIT + 1  # Делаем вид, что он отправил больше 5 сообщений
+
+    count = user_messages.get((chat_id, user_id), 0)
+    return count
+
+# Обработчик новых сообщений
+@dp.message()
+async def check_message(message: types.Message):
     chat_id = message.chat.id
     user_id = message.from_user.id
+    text = message.text.lower()
 
-    # Запрашиваем статистику сообщений в чате
-    chat_member = await bot.get_chat_member(chat_id, user_id)
-    messages_count = chat_member.user.id  # Количество сообщений в чате (айди члена чата)
+    # Считаем количество сообщений пользователя
+    user_messages[(chat_id, user_id)] = user_messages.get((chat_id, user_id), 0) + 1
+    msg_count = await get_user_messages_count(chat_id, user_id)
 
-    # Если юзер написал меньше 5 сообщений и использовал стоп-слово — бан
-    if messages_count < 5 and any(word in message.text.lower() for word in BANNED_WORDS):
-        try:
-            await bot.kick_chat_member(chat_id, user_id)
-            await message.reply(f"🔨 {message.from_user.first_name} я те дам блять заработок.")
-        except Exception as e:
-            await message.reply(f"⚠ Ошибка: {e}")
+    # Проверяем наличие стоп-слов
+    if any(word in text for word in STOP_WORDS):
+        if msg_count < MESSAGE_LIMIT:
+            await bot.ban_chat_member(chat_id, user_id)
+            await message.answer(f"🚫 Пользователь @{message.from_user.username} забанен за нарушение правил.")
+            return
+
+    # Проверяем количество эмодзи
+    if len(EMOJI_PATTERN.findall(text)) > 5:
+        if msg_count < MESSAGE_LIMIT:
+            await bot.ban_chat_member(chat_id, user_id)
+            await message.answer(f"🚫 Пользователь @{message.from_user.username} забанен за спам эмодзи.")
+            return
 
 # Запуск бота
-if __name__ == "__main__":
-    print("✅ Бот запущен!")
-    import asyncio
-
 async def main():
     await dp.start_polling(bot)
 
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
