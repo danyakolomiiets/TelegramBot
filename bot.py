@@ -11,6 +11,9 @@ from dotenv import load_dotenv
 load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
 
+# Проверяем, видит ли бот переменную
+print(f"🔍 Проверка BOT_TOKEN: {TOKEN}")
+
 if not TOKEN:
     raise ValueError("🚨 Ошибка! BOT_TOKEN не найден. Проверь .env или переменные окружения!")
 
