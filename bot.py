@@ -7,17 +7,15 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import ChatPermissions
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
-# 🎯 Настраиваем логи
+# 🎯 Логирование ошибок
 logging.basicConfig(level=logging.INFO)
 
 # 🔥 Настройки
-TOKEN = os.getenv("TOKEN", "ТОКЕН_ТУТ")  # ЗАМЕНИ НА СВОЙ ТОКЕН
+TOKEN = os.getenv("TOKEN", "7888371111:AAEdOKdeLH1fmZygscWXttr4vwwQGwrJNTk")  # ЗАМЕНИ НА СВОЙ ТОКЕН
 WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://telegrambot-tnm7.onrender.com/")  # Твой Render URL
 
-# 💡 Проверяем токен
-if not TOKEN or "ТОКЕН_ТУТ" in TOKEN:
+if not TOKEN or "7888371111:AAEdOKdeLH1fmZygscWXttr4vwwQGwrJNTk" in TOKEN:
     raise ValueError("🚨 Ошибка! Укажи правильный TOKEN в переменных окружения!")
 
 # 🔥 Создаём бота и диспетчер
@@ -83,16 +81,16 @@ async def process_webhook(request: Request):
         logging.error(f"❌ Ошибка в обработке вебхука: {e}")
         return {"ok": False, "error": str(e)}
 
-async def main():
-    """ Запуск Webhook """
+@app.on_event("startup")
+async def on_startup():
+    """ Устанавливаем вебхук при старте сервера """
     webhook_info = await bot.get_webhook_info()
     
     if webhook_info.url != WEBHOOK_URL:
         await bot.set_webhook(WEBHOOK_URL)
-        print(f"✅ Webhook установлен на {WEBHOOK_URL}")
+        logging.info(f"✅ Webhook установлен на {WEBHOOK_URL}")
 
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 Запускаем сервер на 0.0.0.0:8080")
-    asyncio.run(main())
+    logging.info("🚀 Запускаем сервер на 0.0.0.0:8080")
     uvicorn.run(app, host="0.0.0.0", port=8080)
