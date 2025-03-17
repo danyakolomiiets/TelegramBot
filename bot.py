@@ -1,6 +1,6 @@
 import os
 import re
-from aiogram import Bot, Dispatcher, types, executor
+from aiogram import Bot, Dispatcher, types
 from aiogram.types import ChatMemberUpdated
 from dotenv import load_dotenv
 
@@ -43,4 +43,9 @@ async def check_messages(message: types.Message):
 # Запуск бота
 if __name__ == "__main__":
     print("✅ Бот запущен!")
-    executor.start_polling(dp, skip_updates=True)
+    import asyncio
+
+async def main():
+    await dp.start_polling()
+
+asyncio.run(main())
