@@ -7,18 +7,18 @@ from aiogram.types import ChatPermissions
 from aiogram.fsm.storage.memory import MemoryStorage
 import os
 
-TOKEN = os.environ.get("BOT_TOKEN")
+TOKEN = os.environ.get("TOKEN")
 
-print(f"🔍 Проверка BOT_TOKEN в коде: {TOKEN}")  # Логирование токена
+print(f"🔍 Проверка TOKEN в коде: {TOKEN}")  # Логирование токена
 
 if not TOKEN:
-    raise ValueError("🚨 Ошибка! BOT_TOKEN не найден. Проверь переменные окружения в Render!")
+    raise ValueError("🚨 Ошибка! TOKEN не найден. Проверь переменные окружения в Render!")
 
 # Проверяем, видит ли бот переменную
-print(f"🔍 Проверка BOT_TOKEN: {TOKEN}")
+print(f"🔍 Проверка TOKEN: {TOKEN}")
 
 if not TOKEN:
-    raise ValueError("🚨 Ошибка! BOT_TOKEN не найден. Проверь .env или переменные окружения!")
+    raise ValueError("🚨 Ошибка! TOKEN не найден. Проверь .env или переменные окружения!")
 
 # Инициализация бота и диспетчера
 bot = Bot(token=TOKEN)
