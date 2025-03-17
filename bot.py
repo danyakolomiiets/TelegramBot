@@ -1,4 +1,11 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
+TOKEN = os.getenv("BOT_TOKEN")
+
+if not TOKEN:
+    raise ValueError("🚨 Ошибка! BOT_TOKEN не найден. Проверь .env или переменные окружения!")
 import re
 import asyncio
 from aiogram import Bot, Dispatcher, types
@@ -6,6 +13,7 @@ from aiogram.filters import Command
 from aiogram.types import ChatPermissions
 from aiogram.fsm.storage.memory import MemoryStorage
 from dotenv import load_dotenv
+
 
 # Загружаем токен из .env
 load_dotenv()
