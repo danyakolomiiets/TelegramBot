@@ -1,38 +1,39 @@
 import os
 import re
+import logging
 import asyncio
-from aiohttp import web
+from fastapi import FastAPI, Request
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import ChatPermissions
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
-# 🔹 Получаем токен и вебхук URL из переменных окружения
-TOKEN = os.getenv("TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")  # Укажи этот URL в Render
+# 🎯 Настраиваем логи
+logging.basicConfig(level=logging.INFO)
 
-if not TOKEN or not WEBHOOK_URL:
-    raise ValueError("🚨 Ошибка! TOKEN или WEBHOOK_URL не найдены. Проверь переменные окружения в Render!")
+# 🔥 Настройки
+TOKEN = os.getenv("TOKEN", "ТОКЕН_ТУТ")  # ЗАМЕНИ НА СВОЙ ТОКЕН
+WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://telegrambot-tnm7.onrender.com/")  # Твой Render URL
 
-# 🔹 Инициализация бота и диспетчера
+# 💡 Проверяем токен
+if not TOKEN or "ТОКЕН_ТУТ" in TOKEN:
+    raise ValueError("🚨 Ошибка! Укажи правильный TOKEN в переменных окружения!")
+
+# 🔥 Создаём бота и диспетчер
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# 🔹 Создаем Aiohttp-приложение
-app = web.Application()
-
-# 🔹 Регистрируем вебхук в aiogram
-SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/")
-setup_application(app, dp, bot=bot)
-
-# 🔹 Храним количество сообщений пользователей
-user_messages = {}
+# 🔹 FastAPI сервер
+app = FastAPI()
 
 # 🔹 Стоп-слова и лимит эмодзи
 STOP_WORDS = {"заработок", "работа", "команда"}
-EMOJI_PATTERN = re.compile(r'[\U0001F300-\U0001F6FF]', re.UNICODE)  # Поиск эмодзи
-MESSAGE_LIMIT = 5  # Лимит сообщений
+EMOJI_PATTERN = re.compile(r'[\U0001F300-\U0001F6FF]', re.UNICODE)
+MESSAGE_LIMIT = 5
+
+# 🔹 Храним количество сообщений пользователей
+user_messages = {}
 
 async def get_user_messages_count(chat_id: int, user_id: int):
     """ Проверка количества сообщений пользователя """
@@ -70,19 +71,28 @@ async def check_message(message: types.Message):
             await message.answer(f"🚫 Пользователь @{message.from_user.username} забанен за спам эмодзи.")
             return
 
-async def set_webhook():
-    """ Устанавливает вебхук """
+@app.post("/")
+async def process_webhook(request: Request):
+    """ Обрабатывает входящие запросы от Telegram """
+    try:
+        data = await request.json()
+        update = types.Update(**data)
+        await dp.feed_update(bot, update)
+        return {"ok": True}
+    except Exception as e:
+        logging.error(f"❌ Ошибка в обработке вебхука: {e}")
+        return {"ok": False, "error": str(e)}
+
+async def main():
+    """ Запуск Webhook """
     webhook_info = await bot.get_webhook_info()
     
     if webhook_info.url != WEBHOOK_URL:
         await bot.set_webhook(WEBHOOK_URL)
         print(f"✅ Webhook установлен на {WEBHOOK_URL}")
 
-async def on_startup(app):
-    """ Выполняется при старте приложения """
-    await set_webhook()
-
-app.on_startup.append(on_startup)
-
 if __name__ == "__main__":
-    web.run_app(app, port=8080)  # Запуск веб-приложения
+    import uvicorn
+    print("🚀 Запускаем сервер на 0.0.0.0:8080")
+    asyncio.run(main())
+    uvicorn.run(app, host="0.0.0.0", port=8080)
