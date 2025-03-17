@@ -5,11 +5,14 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import ChatPermissions
 from aiogram.fsm.storage.memory import MemoryStorage
-from dotenv import load_dotenv
+import os
 
-# Загружаем токен
-load_dotenv()
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = os.environ.get("BOT_TOKEN")
+
+print(f"🔍 Проверка BOT_TOKEN в коде: {TOKEN}")  # Логирование токена
+
+if not TOKEN:
+    raise ValueError("🚨 Ошибка! BOT_TOKEN не найден. Проверь переменные окружения в Render!")
 
 # Проверяем, видит ли бот переменную
 print(f"🔍 Проверка BOT_TOKEN: {TOKEN}")
