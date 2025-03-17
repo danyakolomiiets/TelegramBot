@@ -12,7 +12,10 @@ if not TOKEN:
     raise ValueError("❌ Токен не найден! Проверь .env файл.")
 
 bot = Bot(token=TOKEN)
-dp = Dispatcher(bot)
+from aiogram import Bot, Dispatcher
+
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
 
 # Запрещённые слова
 BANNED_WORDS = ["заработок", "работа", "команда"]
@@ -46,6 +49,6 @@ if __name__ == "__main__":
     import asyncio
 
 async def main():
-    await dp.start_polling()
+    await dp.start_polling(bot)
 
 asyncio.run(main())
