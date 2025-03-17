@@ -47,6 +47,9 @@ async def get_user_messages_count(chat_id: int, user_id: int):
 # Обработчик новых сообщений
 @dp.message()
 async def check_message(message: types.Message):
+    if not message.text:  # Проверяем, есть ли текст в сообщении
+        return
+
     chat_id = message.chat.id
     user_id = message.from_user.id
     text = message.text.lower()
