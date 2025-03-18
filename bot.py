@@ -5,11 +5,7 @@ import asyncio
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import ChatPermissions
 from aiogram.filters import CommandStart
-from aiogram.enums import ParseMode
-from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
-from fastapi import FastAPI
-import uvicorn
 
 # Загружаем токен
 load_dotenv()
@@ -19,8 +15,8 @@ TOKEN = os.getenv("TOKEN")
 logging.basicConfig(level=logging.INFO)
 
 # Инициализируем бота и диспетчер
-bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-dp = Dispatcher()  # Убираем dp.include_router(dp), это ломало бота
+bot = Bot(token=TOKEN)
+dp = Dispatcher()
 
 # Список запрещённых слов
 BANNED_WORDS = {"заработок", "работа", "команда"}
@@ -31,7 +27,7 @@ MAX_EMOJIS = 5
 # Обработчик команды /start
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
-    await message.reply("Привет! Этот бот банит за запрещённые слова и спам эмодзи.")
+    await message.reply("Я ГОТОВ УБИВАТЬ.")
 
 # Обработчик сообщений
 @dp.message()
@@ -59,22 +55,8 @@ async def check_message(message: types.Message):
         await message.reply(f"{message.from_user.first_name}, вы были забанены за нарушение правил.")
         logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен в чате {chat_id}.")
 
-# Заглушка для Render (чтобы не вылетало из-за портов)
-app = FastAPI()
-
-@app.get("/")
-def home():
-    return {"status": "Bot is running"}
-
-async def run_bot():
-    await dp.start_polling(bot)  # Теперь правильно запускаем бота
-
-# Запуск FastAPI + бота
-def start():
-    loop = asyncio.new_event_loop()  # Меняем запуск asyncio
-    asyncio.set_event_loop(loop)
-    loop.create_task(run_bot())
-    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
+async def main():
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    start()
+    asyncio.run(main())
