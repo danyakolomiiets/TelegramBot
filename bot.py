@@ -23,8 +23,8 @@ BANNED_WORDS = {"заработок", "работа", "команда"}
 # Максимальное количество эмодзи в сообщении
 MAX_EMOJIS = 5
 
-# Минимальное количество сообщений в чате, чтобы не считаться новичком
-MESSAGE_LIMIT = 5
+# Сколько секунд участник должен пробыть в чате, чтобы не считаться новичком
+NEW_MEMBER_TIME = 86400  # 24 часа
 
 # Обработчик команды /start
 @dp.message(CommandStart())
@@ -48,21 +48,30 @@ async def check_message(message: types.Message):
     if user_id in admins:
         return
 
-    # Получаем количество сообщений пользователя в чате
+    # Получаем информацию о пользователе
     user_info = await bot.get_chat_member(chat_id, user_id)
-    user_message_count = user_info.user.id  # Telegram не даёт точное число сообщений, но проверяем по ID
 
-    # Если пользователь написал 5+ сообщений, он уже не новичок
-    if user_message_count >= MESSAGE_LIMIT:
+    # Проверяем, как давно пользователь в чате
+    if user_info.status in ["restricted", "left", "kicked"]:
+        await bot.ban_chat_member(chat_id, user_id)
+        logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен как новичок.")
         return
+
+    # Проверяем, когда он вступил в чат
+    if user_info.status == "member" and user_info.joined_date:
+        time_in_chat = (message.date - user_info.joined_date).total_seconds()
+        if time_in_chat < NEW_MEMBER_TIME:
+            await bot.ban_chat_member(chat_id, user_id)
+            logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен, так как в чате менее 24 часов.")
+            return
 
     # Подсчёт эмодзи
     emoji_count = len(re.findall(r"[\U0001F600-\U0001F64F]", text))
 
-    # Проверка условий бана (если у пользователя < 5 сообщений)
+    # Проверка условий бана (только для новичков)
     if any(word in text for word in BANNED_WORDS) or emoji_count > MAX_EMOJIS:
         await bot.ban_chat_member(chat_id, user_id)
-        logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен в чате {chat_id}, так как у него < 5 сообщений.")
+        logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен в чате {chat_id}, так как он новичок.")
 
 async def main():
     await dp.start_polling(bot)
