@@ -6,6 +6,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import ChatPermissions
 from aiogram.filters import CommandStart
 from aiogram.enums import ParseMode
+from aiogram.client.default import DefaultBotProperties
 from dotenv import load_dotenv
 from fastapi import FastAPI
 import uvicorn
@@ -17,8 +18,8 @@ TOKEN = os.getenv("TOKEN")
 # Включаем логирование
 logging.basicConfig(level=logging.INFO)
 
-# Инициализируем бота и диспетчер
-bot = Bot(token=TOKEN, parse_mode=ParseMode.HTML)
+# Инициализируем бота с новым синтаксисом
+bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
 # Список запрещённых слов
