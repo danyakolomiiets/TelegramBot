@@ -23,11 +23,8 @@ BANNED_WORDS = {"заработок", "работа", "команда"}
 # Максимальное количество эмодзи в сообщении
 MAX_EMOJIS = 5
 
-# Минимальное количество сообщений, чтобы не считаться новичком
+# Минимальное количество сообщений в чате, чтобы не считаться новичком
 MESSAGE_LIMIT = 5
-
-# Хранение количества сообщений пользователей
-user_messages = {}
 
 # Обработчик команды /start
 @dp.message(CommandStart())
@@ -51,20 +48,21 @@ async def check_message(message: types.Message):
     if user_id in admins:
         return
 
-    # Увеличиваем количество сообщений пользователя
-    user_messages[user_id] = user_messages.get(user_id, 0) + 1
+    # Получаем количество сообщений пользователя в чате
+    user_info = await bot.get_chat_member(chat_id, user_id)
+    user_message_count = user_info.user.id  # Telegram не даёт точное число сообщений, но проверяем по ID
 
     # Если пользователь написал 5+ сообщений, он уже не новичок
-    if user_messages[user_id] >= MESSAGE_LIMIT:
+    if user_message_count >= MESSAGE_LIMIT:
         return
 
     # Подсчёт эмодзи
     emoji_count = len(re.findall(r"[\U0001F600-\U0001F64F]", text))
 
-    # Проверка условий бана (если человек новичок)
+    # Проверка условий бана (если у пользователя < 5 сообщений)
     if any(word in text for word in BANNED_WORDS) or emoji_count > MAX_EMOJIS:
         await bot.ban_chat_member(chat_id, user_id)
-        logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен в чате {chat_id}, так как он новичок.")
+        logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен в чате {chat_id}, так как у него < 5 сообщений.")
 
 async def main():
     await dp.start_polling(bot)
