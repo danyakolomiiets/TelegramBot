@@ -1,96 +1,51 @@
 import os
-import re
 import logging
-import asyncio
-from fastapi import FastAPI, Request
+import re
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
 from aiogram.types import ChatPermissions
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.utils import executor
+from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from dotenv import load_dotenv
 
-# 🎯 Логирование ошибок
+# Загружаем токен
+load_dotenv()
+TOKEN = os.getenv("TOKEN")
+
+# Включаем логирование
 logging.basicConfig(level=logging.INFO)
 
-# 🔥 Настройки
-TOKEN = os.getenv("TOKEN")  # ЗАМЕНИ НА СВОЙ ТОКЕН
-WEBHOOK_URL = os.getenv("WEBHOOK_URL", "https://telegrambot-tnm7.onrender.com/")  # Твой Render URL
-
-if not TOKEN in TOKEN:
-    raise ValueError("🚨 Ошибка! Укажи правильный TOKEN в переменных окружения!")
-
-# 🔥 Создаём бота и диспетчер
+# Инициализируем бота и диспетчер
 bot = Bot(token=TOKEN)
-dp = Dispatcher(storage=MemoryStorage())
+dp = Dispatcher(bot, storage=MemoryStorage())
 
-# 🔹 FastAPI сервер
-app = FastAPI()
+# Список запрещённых слов
+BANNED_WORDS = {"заработок", "работа", "команда"}
 
-# 🔹 Стоп-слова и лимит эмодзи
-STOP_WORDS = {"заработок", "работа", "команда"}
-EMOJI_PATTERN = re.compile(r'[\U0001F300-\U0001F6FF]', re.UNICODE)
-MESSAGE_LIMIT = 5
+# Максимальное количество эмодзи в сообщении
+MAX_EMOJIS = 5
 
-# 🔹 Храним количество сообщений пользователей
-user_messages = {}
-
-async def get_user_messages_count(chat_id: int, user_id: int):
-    """ Проверка количества сообщений пользователя """
-    chat = await bot.get_chat(chat_id)
-    members = await bot.get_chat_administrators(chat_id)
-
-    for member in members:
-        if member.user.id == user_id:
-            return MESSAGE_LIMIT + 1  # Не баним админов
-
-    return user_messages.get((chat_id, user_id), 0)
-
-@dp.message()
+@dp.message_handler(content_types=types.ContentType.TEXT)
 async def check_message(message: types.Message):
-    """ Проверка сообщений пользователей на стоп-слова и спам эмодзи """
-    if not message.text:
-        return
-
-    chat_id = message.chat.id
     user_id = message.from_user.id
+    chat_id = message.chat.id
     text = message.text.lower()
 
-    user_messages[(chat_id, user_id)] = user_messages.get((chat_id, user_id), 0) + 1
-    msg_count = await get_user_messages_count(chat_id, user_id)
+    # Получаем список администраторов чата
+    admins = [admin.user.id for admin in await bot.get_chat_administrators(chat_id)]
 
-    if any(word in text for word in STOP_WORDS):
-        if msg_count < MESSAGE_LIMIT:
-            await bot.ban_chat_member(chat_id, user_id)
-            await message.answer(f"🚫 Пользователь @{message.from_user.username} забанен за нарушение правил.")
-            return
+    # Если пользователь - админ, не баним его
+    if user_id in admins:
+        return
 
-    if len(EMOJI_PATTERN.findall(text)) > 5:
-        if msg_count < MESSAGE_LIMIT:
-            await bot.ban_chat_member(chat_id, user_id)
-            await message.answer(f"🚫 Пользователь @{message.from_user.username} забанен за спам эмодзи.")
-            return
+    # Подсчёт эмодзи
+    emoji_count = len(re.findall(r"[\U0001F600-\U0001F64F]", text))
 
-@app.post("/")
-async def process_webhook(request: Request):
-    """ Обрабатывает входящие запросы от Telegram """
-    try:
-        data = await request.json()
-        update = types.Update(**data)
-        await dp.feed_update(bot, update)
-        return {"ok": True}
-    except Exception as e:
-        logging.error(f"❌ Ошибка в обработке вебхука: {e}")
-        return {"ok": False, "error": str(e)}
+    # Проверка условий бана
+    if any(word in text for word in BANNED_WORDS) or emoji_count > MAX_EMOJIS:
+        await bot.kick_chat_member(chat_id, user_id)
+        await message.reply(f"{message.from_user.first_name}, вы были забанены за нарушение правил.")
+        logging.info(f"Пользователь {message.from_user.first_name} ({user_id}) забанен в чате {chat_id}.")
 
-@app.on_event("startup")
-async def on_startup():
-    """ Устанавливаем вебхук при старте сервера """
-    webhook_info = await bot.get_webhook_info()
-    
-    if webhook_info.url != WEBHOOK_URL:
-        await bot.set_webhook(WEBHOOK_URL)
-        logging.info(f"✅ Webhook установлен на {WEBHOOK_URL}")
-
+# Запуск бота
 if __name__ == "__main__":
-    import uvicorn
-    logging.info("🚀 Запускаем сервер на 0.0.0.0:8080")
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    executor.start_polling(dp, skip_updates=True)
