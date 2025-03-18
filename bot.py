@@ -2,9 +2,10 @@ import os
 import logging
 import re
 import asyncio
+import uvicorn
+from fastapi import FastAPI
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
-from aiogram.enums import ChatMemberStatus
 from dotenv import load_dotenv
 
 # Загружаем токен
@@ -18,8 +19,15 @@ logging.basicConfig(level=logging.INFO)
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
+# Создаём сервер FastAPI, чтобы Render не отключал процесс
+app = FastAPI()
+
+@app.get("/")
+async def home():
+    return {"status": "Bot is running"}
+
 # Список запрещённых слов
-BANNED_WORDS = {"заработок", "работа", "команда"}
+BANNED_WORDS = {"заработок", "работа", "команда", "источник", "дохода", "пассивно", "рисков", "подробности", "график"}
 
 # Максимальное количество эмодзи в сообщении
 MAX_EMOJIS = 5
@@ -64,8 +72,16 @@ async def check_message(message: types.Message):
         await bot.ban_chat_member(chat_id, user_id)
         logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен в чате {chat_id}, так как это его первое сообщение.")
 
-async def main():
+# Функция для старта бота
+async def run_bot():
     await dp.start_polling(bot)
 
+# Функция для запуска FastAPI и бота
+def start():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.create_task(run_bot())
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    start()
