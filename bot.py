@@ -2,7 +2,7 @@ import os
 import logging
 import re
 import asyncio
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.types import ChatPermissions
 from aiogram.filters import CommandStart
 from aiogram.enums import ParseMode
@@ -18,7 +18,7 @@ TOKEN = os.getenv("TOKEN")
 # Включаем логирование
 logging.basicConfig(level=logging.INFO)
 
-# Инициализируем бота с новым синтаксисом
+# Инициализируем бота и диспетчер
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
@@ -28,11 +28,13 @@ BANNED_WORDS = {"заработок", "работа", "команда"}
 # Максимальное количество эмодзи в сообщении
 MAX_EMOJIS = 5
 
+# Обработчик команды /start
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
     await message.reply("Привет! Этот бот банит за запрещённые слова и спам эмодзи.")
 
-@dp.message()
+# Обработчик сообщений
+@dp.message(F.text)
 async def check_message(message: types.Message):
     user_id = message.from_user.id
     chat_id = message.chat.id
@@ -62,6 +64,7 @@ def home():
     return {"status": "Bot is running"}
 
 async def run_bot():
+    dp.include_router(dp)  # Явно регистрируем хендлеры
     await dp.start_polling(bot)
 
 # Запуск FastAPI + бота
