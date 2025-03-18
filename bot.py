@@ -2,8 +2,7 @@ import os
 import logging
 import re
 import asyncio
-from aiogram import Bot, Dispatcher, types, F
-from aiogram.types import ChatPermissions
+from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
@@ -18,7 +17,7 @@ TOKEN = os.getenv("TOKEN")
 # Включаем логирование
 logging.basicConfig(level=logging.INFO)
 
-# Инициализируем бота и диспетчер
+# Инициализируем бота с новым синтаксисом
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
@@ -34,8 +33,11 @@ async def start_handler(message: types.Message):
     await message.reply("Привет! Этот бот банит за запрещённые слова и спам эмодзи.")
 
 # Обработчик сообщений
-@dp.message(F.text)
+@dp.message()
 async def check_message(message: types.Message):
+    if not message.text:
+        return  # Если сообщение без текста (например, фото) — пропускаем
+    
     user_id = message.from_user.id
     chat_id = message.chat.id
     text = message.text.lower()
@@ -54,7 +56,7 @@ async def check_message(message: types.Message):
     if any(word in text for word in BANNED_WORDS) or emoji_count > MAX_EMOJIS:
         await bot.ban_chat_member(chat_id, user_id)
         await message.reply(f"{message.from_user.first_name}, вы были забанены за нарушение правил.")
-        logging.info(f"Пользователь {message.from_user.first_name} ({user_id}) забанен в чате {chat_id}.")
+        logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен в чате {chat_id}.")
 
 # Заглушка для Render (чтобы не вылетало из-за портов)
 app = FastAPI()
@@ -64,7 +66,7 @@ def home():
     return {"status": "Bot is running"}
 
 async def run_bot():
-    dp.include_router(dp)  # Явно регистрируем хендлеры
+    dp.include_router(dp)  # Регистрируем хендлеры
     await dp.start_polling(bot)
 
 # Запуск FastAPI + бота
