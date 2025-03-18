@@ -30,7 +30,7 @@ user_messages = set()
 # Обработчик команды /start
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
-    await message.reply("Привет! Этот бот банит за запрещённые слова, но только если это твоё первое сообщение в чате.")
+    await message.reply("Я ГОТОВ УБИВАТЬ.")
 
 # Обработчик сообщений
 @dp.message()
