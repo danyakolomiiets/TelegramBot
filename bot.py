@@ -2,15 +2,18 @@ import os
 import logging
 import re
 import asyncio
+import requests
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import ChatPermissions
 from aiogram.filters import CommandStart
-from aiogram.utils.chat_action import ChatActionSender
 from dotenv import load_dotenv
 
 # Загружаем токен
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
+
+# Удаляем вебхук перед запуском
+requests.post(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
 
 # Включаем логирование
 logging.basicConfig(level=logging.INFO)
