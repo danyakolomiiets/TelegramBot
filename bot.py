@@ -24,6 +24,9 @@ BANNED_WORDS = {"заработок", "работа", "команда"}
 # Максимальное количество эмодзи в сообщении
 MAX_EMOJIS = 5
 
+# Хранение данных о пользователях, кто уже написал хоть одно сообщение
+user_messages = set()
+
 # Обработчик команды /start
 @dp.message(CommandStart())
 async def start_handler(message: types.Message):
@@ -46,18 +49,20 @@ async def check_message(message: types.Message):
     if user_id in admins:
         return
 
-    # Получаем информацию о пользователе
-    user_info = await bot.get_chat_member(chat_id, user_id)
+    # Если пользователь уже писал в чате, он не считается новичком
+    if user_id in user_messages:
+        return
 
-    # Проверяем, является ли пользователь новичком
-    if user_info.status == ChatMemberStatus.RESTRICTED or user_info.status == ChatMemberStatus.LEFT:
-        # Подсчёт эмодзи
-        emoji_count = len(re.findall(r"[\U0001F600-\U0001F64F]", text))
+    # Добавляем пользователя в список тех, кто уже писал
+    user_messages.add(user_id)
 
-        # Если это первое сообщение в чате и оно нарушает правила — баним
-        if any(word in text for word in BANNED_WORDS) or emoji_count > MAX_EMOJIS:
-            await bot.ban_chat_member(chat_id, user_id)
-            logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен в чате {chat_id}, так как это его первое сообщение.")
+    # Подсчёт эмодзи
+    emoji_count = len(re.findall(r"[\U0001F600-\U0001F64F]", text))
+
+    # Если это первое сообщение в чате и оно нарушает правила — баним
+    if any(word in text for word in BANNED_WORDS) or emoji_count > MAX_EMOJIS:
+        await bot.ban_chat_member(chat_id, user_id)
+        logging.info(f"Пользователь {message.from_user.full_name} ({user_id}) забанен в чате {chat_id}, так как это его первое сообщение.")
 
 async def main():
     await dp.start_polling(bot)
