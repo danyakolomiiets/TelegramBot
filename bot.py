@@ -3,6 +3,7 @@ import logging
 import re
 import asyncio
 from aiogram import Bot, Dispatcher, types
+from aiogram.types import ChatPermissions
 from aiogram.filters import CommandStart
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
@@ -17,9 +18,9 @@ TOKEN = os.getenv("TOKEN")
 # Включаем логирование
 logging.basicConfig(level=logging.INFO)
 
-# Инициализируем бота с новым синтаксисом
+# Инициализируем бота и диспетчер
 bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-dp = Dispatcher()
+dp = Dispatcher()  # Убираем dp.include_router(dp), это ломало бота
 
 # Список запрещённых слов
 BANNED_WORDS = {"заработок", "работа", "команда"}
@@ -36,8 +37,8 @@ async def start_handler(message: types.Message):
 @dp.message()
 async def check_message(message: types.Message):
     if not message.text:
-        return  # Если сообщение без текста (например, фото) — пропускаем
-    
+        return  # Пропускаем сообщения без текста (например, фото)
+
     user_id = message.from_user.id
     chat_id = message.chat.id
     text = message.text.lower()
@@ -66,12 +67,12 @@ def home():
     return {"status": "Bot is running"}
 
 async def run_bot():
-    dp.include_router(dp)  # Регистрируем хендлеры
-    await dp.start_polling(bot)
+    await dp.start_polling(bot)  # Теперь правильно запускаем бота
 
 # Запуск FastAPI + бота
 def start():
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()  # Меняем запуск asyncio
+    asyncio.set_event_loop(loop)
     loop.create_task(run_bot())
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
 
