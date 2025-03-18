@@ -2,24 +2,23 @@ import os
 import logging
 import re
 import asyncio
-import requests
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import ChatPermissions
 from aiogram.filters import CommandStart
+from aiogram.enums import ParseMode
 from dotenv import load_dotenv
+from fastapi import FastAPI
+import uvicorn
 
 # Загружаем токен
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
-# Удаляем вебхук перед запуском
-requests.post(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
-
 # Включаем логирование
 logging.basicConfig(level=logging.INFO)
 
 # Инициализируем бота и диспетчер
-bot = Bot(token=TOKEN)
+bot = Bot(token=TOKEN, parse_mode=ParseMode.HTML)
 dp = Dispatcher()
 
 # Список запрещённых слов
@@ -54,8 +53,21 @@ async def check_message(message: types.Message):
         await message.reply(f"{message.from_user.first_name}, вы были забанены за нарушение правил.")
         logging.info(f"Пользователь {message.from_user.first_name} ({user_id}) забанен в чате {chat_id}.")
 
-async def main():
+# Заглушка для Render (чтобы не вылетало из-за портов)
+app = FastAPI()
+
+@app.get("/")
+def home():
+    return {"status": "Bot is running"}
+
+async def run_bot():
     await dp.start_polling(bot)
 
+# Запуск FastAPI + бота
+def start():
+    loop = asyncio.get_event_loop()
+    loop.create_task(run_bot())
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    start()
