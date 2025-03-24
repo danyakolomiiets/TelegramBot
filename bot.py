@@ -21,7 +21,12 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher(bot, storage=MemoryStorage())
 
 # Настройки модерации
-BANNED_WORDS = {"заработок", "работа", "команда"}
+BANNED_WORDS = {
+    "заработок", "работа", "команда", "Доход", "доход", "Заработок", "Работа", "Команда",
+    "требуются", "Требуются", "требуется", "Требуется", "Оплата", "оплата", "Удаленка", "удаленка",
+    "Партнёрство", "партнёрство", "Партнерство", "партнерство", "заработать", "удаленную",
+    "Удаленную", "удаленной", "Удаленной", "деятельности", "Деятельности", "партнеров", "ознакомлю"
+}
 MAX_EMOJIS = 5
 MAX_MESSAGES_FOR_NEW_USERS = 5
 user_messages = {}
@@ -47,6 +52,8 @@ async def check_message(message: types.Message):
 
     if (any(word in text for word in BANNED_WORDS) or emoji_count > MAX_EMOJIS) and user_messages[user_id] < MAX_MESSAGES_FOR_NEW_USERS:
         await bot.kick_chat_member(chat_id, user_id)
+        await message.delete()
+        logging.info(f"Пользователь {message.from_user.full_name} (ID: {user_id}) был забанен в чате {chat_id} за подозрительное сообщение.")
 
 # HTTP-сервер для Render
 async def handle_ping(request):
@@ -81,6 +88,3 @@ async def main():
         self_pinger(),
         dp.start_polling()
     )
-
-if __name__ == "__main__":
-    asyncio.run(main())
