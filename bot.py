@@ -100,10 +100,12 @@ async def self_pinger():
 
 # Основной запуск
 async def main():
+    await bot.delete_webhook(drop_pending_updates=True)  # <-- КРИТИЧЕСКАЯ СТРОКА!
     await asyncio.gather(
         run_web_server(),
         self_pinger(),
         dp.start_polling()
     )
+
 if __name__ == "__main__":
     asyncio.run(main())
